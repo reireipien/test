@@ -1,4 +1,3 @@
-/* src/App.jsx */
 import React, { useState, useEffect } from 'react'
 import Fraction from 'fraction.js'
 import { gaussJordan } from './utils/gaussJordan'
@@ -17,12 +16,14 @@ export default function App() {
   const [rows, setRows] = useState(3)
   const [cols, setCols] = useState(3)
   const [matrix, setMatrix] = useState([])
-  const [result, setResult] = useState(null)
+  const [result, setResult] = useState(null)  // Fraction[][] | null
+  const [steps, setSteps] = useState([])      // 履歴
 
-  // 行列サイズ変更時に初期化
+  // サイズ変更で初期化
   useEffect(() => {
     setMatrix(Array.from({ length: rows }, () => Array(cols).fill('')))
     setResult(null)
+    setSteps([])
   }, [rows, cols])
 
   const handleChange = (r, c, value) => {
@@ -36,8 +37,9 @@ export default function App() {
   const reduce = () => {
     try {
       const numeric = matrix.map((row) => row.map(parseFraction))
-      const reduced = gaussJordan(numeric)
-      setResult(reduced)
+      const { rref, steps } = gaussJordan(numeric)
+      setResult(rref)
+      setSteps(steps)
     } catch (err) {
       alert('入力を確認してください: ' + err.message)
     }
@@ -45,45 +47,30 @@ export default function App() {
 
   return (
     <main>
-      <h1>行列簡約化ツール (分数対応)</h1>
+      <h1>行列簡約化ツール (履歴付き)</h1>
 
-      <div style={{ marginBottom: '1rem' }}>
+      {/* サイズ入力 */}
+      <div className="controls">
         <label>
           行数:
-          <input
-            type="number"
-            min="1"
-            value={rows}
-            onChange={(e) => setRows(Number(e.target.value))}
-            style={{ width: '4rem', marginLeft: '0.25rem' }}
-          />
+          <input type="number" min="1" value={rows} onChange={(e) => setRows(Number(e.target.value))} />
         </label>
-        <label style={{ marginLeft: '1rem' }}>
+        <label>
           列数:
-          <input
-            type="number"
-            min="1"
-            value={cols}
-            onChange={(e) => setCols(Number(e.target.value))}
-            style={{ width: '4rem', marginLeft: '0.25rem' }}
-          />
+          <input type="number" min="1" value={cols} onChange={(e) => setCols(Number(e.target.value))} />
         </label>
       </div>
 
+      {/* 入力テーブル */}
       {matrix.length > 0 && (
-        <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+        <div className="scroll">
           <table>
             <tbody>
               {matrix.map((row, r) => (
                 <tr key={r}>
                   {row.map((value, c) => (
                     <td key={c}>
-                      <input
-                        type="text"
-                        value={value}
-                        onChange={(e) => handleChange(r, c, e.target.value)}
-                        style={{ width: '5rem', textAlign: 'center' }}
-                      />
+                      <input type="text" value={value} onChange={(e) => handleChange(r, c, e.target.value)} />
                     </td>
                   ))}
                 </tr>
@@ -93,34 +80,50 @@ export default function App() {
         </div>
       )}
 
+      {/* 簡約化ボタン */}
       {matrix.length > 0 && (
-        <button onClick={reduce} style={{ padding: '0.4rem 1rem' }}>
-          簡約化
-        </button>
+        <button className="primary" onClick={reduce}>簡約化</button>
       )}
 
+      {/* 結果表示 */}
       {result && (
-        <section style={{ marginTop: '1.5rem' }}>
-          <h2>結果 (既約行列・分数表示)</h2>
-          <table>
-            <tbody>
-              {result.map((row, r) => (
-                <tr key={r}>
-                  {row.map((value, c) => (
-                    <td key={c} style={{ textAlign: 'center', padding: '0.25rem 0.5rem' }}>
-                      {value.toFraction(true)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <section>
+          <h2>結果 (既約行列)</h2>
+          <MatrixTable data={result} />
         </section>
       )}
 
-      <p style={{ fontSize: '0.85rem', marginTop: '1rem' }}>
-        ※ 分数入力例: <code>-5/7</code>、整数は <code>3</code> のように入力します。
-      </p>
+      {/* 履歴表示 */}
+      {steps.length > 0 && (
+        <section>
+          <h2>行基本変形の過程</h2>
+          {steps.map((step, idx) => (
+            <details key={idx} open={idx === steps.length - 1 /* 最終結果だけ開く */}>
+              <summary>{`${idx}. ${step.op}`}</summary>
+              <MatrixTable data={step.snapshot} />
+            </details>
+          ))}
+        </section>
+      )}
+
+      <p className="note">※ 分数入力例: <code>-5/7</code>、整数は <code>3</code> のように入力します。</p>
     </main>
+  )
+}
+
+// 行列表示用コンポーネント
+function MatrixTable({ data }) {
+  return (
+    <table className="matrix">
+      <tbody>
+        {data.map((row, r) => (
+          <tr key={r}>
+            {row.map((value, c) => (
+              <td key={c}>{value.toFraction(true)}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
