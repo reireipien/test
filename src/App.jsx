@@ -106,7 +106,7 @@ export default function App() {
         </section>
       )}
 
-      <p className="note">※ 分数入力例: <code>-5/7</code>、整数は <code>3</code> のように入力します。</p>
+      <p className="note">※ 入力例 : 整数は <code>6</code>、分数は <code>-1/2</code>のように入力します。</p>
     </main>
   )
 }
